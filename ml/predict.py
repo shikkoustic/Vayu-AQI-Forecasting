@@ -218,8 +218,12 @@ def predict_next_day(region_name="North_Delhi"):
         try:
             active_mod = resolve_model(mod, row_feat)
 
+            expected_feats = feats
+            if hasattr(active_mod, "feature_names_in_"):
+                expected_feats = active_mod.feature_names_in_
+
             X_input = []
-            for f in feats:
+            for f in expected_feats:
                 if f in row_feat:
                     X_input.append(row_feat[f])
                 else:
@@ -237,7 +241,7 @@ def predict_next_day(region_name="North_Delhi"):
                 X_seq = []
                 for idx, row in last_24_rows.iterrows():
                     r_feat = []
-                    for f in feats:
+                    for f in expected_feats:
                         if f in row: r_feat.append(row[f])
                         else:
                             alt_f = {"temp": "temp_2m", "wind": "wind_speed", "precip": "precipitation", "solar": "solar_radiation"}.get(f)
@@ -499,6 +503,10 @@ def forecast_extended_aqi(region_name="North_Delhi"):
             active_model = mod["winter"] if is_winter else mod["summer"]
         else:
             active_model = mod
+            
+        expected_feats = feats
+        if hasattr(active_model, "feature_names_in_"):
+            expected_feats = active_model.feature_names_in_
 
         row_feat = row_feat_base.copy()
         
@@ -546,7 +554,7 @@ def forecast_extended_aqi(region_name="North_Delhi"):
             X_input = []
             reverse_map = {"temp": "temp_2m", "wind": "wind_speed",
                            "precip": "precipitation", "solar": "solar_radiation"}
-            for f in feats:
+            for f in expected_feats:
                 if f in step_features:
                     X_input.append(float(step_features[f]))
                 else:

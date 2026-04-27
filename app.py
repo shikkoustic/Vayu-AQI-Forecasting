@@ -357,12 +357,24 @@ def predict_for_date(date, region="North_Delhi"):
             "wind_speed_10m_kmh": "wind_speed", "wind_speed_10m": "wind_speed"
         }
         df_feat = df_feat.rename(columns={k: v for k, v in col_mapping.items() if k in df_feat.columns})
+        if "temp_2m" in df_feat.columns: df_feat["temp"] = df_feat["temp_2m"]
+        if "wind_speed" in df_feat.columns: df_feat["wind"] = df_feat["wind_speed"]
+        if "precipitation" in df_feat.columns: df_feat["precip"] = df_feat["precipitation"]
+        if "solar_radiation" in df_feat.columns: df_feat["solar"] = df_feat["solar_radiation"]
+        
+        all_feats = set((xgb_features or []) + (lgb_features or []) + (cat_features or []) + (gru_features or []) + (rf_features or []))
+        for f in all_feats:
+            if f not in df_feat.columns:
+                df_feat[f] = 0
         target_dt = row.iloc[0]['date']
         feat_row = df_feat[df_feat['date'] == target_dt]
         if not feat_row.empty:
             r = feat_row.iloc[0]
             def pred(mod_name, mod, feats):
                 if not mod or feats is None: return actual_aqi
+                if isinstance(mod, dict) and mod.get("blended"):
+                    is_winter = r.get("month", 6) in [10, 11, 12, 1, 2, 3]
+                    mod = mod["winter"] if is_winter else mod["summer"]
                 if mod_name == "rf":
                     X = r[feats].values.reshape(1, -1)
                     pred_val = mod.predict(X)
@@ -519,6 +531,11 @@ def aqi_range():
             "wind_speed_10m_kmh": "wind_speed", "wind_speed_10m": "wind_speed"
         }
         df = df.rename(columns={k: v for k, v in col_mapping.items() if k in df.columns})
+        if "temp_2m" in df.columns: df["temp"] = df["temp_2m"]
+        if "wind_speed" in df.columns: df["wind"] = df["wind_speed"]
+        if "precipitation" in df.columns: df["precip"] = df["precipitation"]
+        if "solar_radiation" in df.columns: df["solar"] = df["solar_radiation"]
+        
         from ml.predict import load_regional_models
         xgb, lgb, cat, gru, rf = load_regional_models(region)
         xgb_model, xgb_features, _ = xgb
@@ -526,12 +543,20 @@ def aqi_range():
         cat_model, cat_features, _ = cat
         gru_model, gru_features, gru_scaler, _ = gru
         rf_model, rf_features, _ = rf
+        
+        all_feats = set((xgb_features or []) + (lgb_features or []) + (cat_features or []) + (gru_features or []) + (rf_features or []))
+        for f in all_feats:
+            if f not in df.columns:
+                df[f] = 0
         filtered = df[(df['date'] >= start) & (df['date'] <= end)].sort_values("date")
         res_dicts = []
         for idx, row in filtered.iterrows():
             actual_aqi = pm25_to_aqi(row["PM2.5"])
             def pred(mod_name, mod, feats):
                 if not mod or feats is None: return actual_aqi
+                if isinstance(mod, dict) and mod.get("blended"):
+                    is_winter = row.get("month", 6) in [10, 11, 12, 1, 2, 3]
+                    mod = mod["winter"] if is_winter else mod["summer"]
                 if mod_name == "rf":
                     X = row[feats].values.reshape(1, -1)
                     pred_val = mod.predict(X)
@@ -654,3 +679,6 @@ if __name__ == '__main__':
         )
         scheduler.start()
         print("\n⏰ Scheduler active — data will auto-refresh every 2 hours at :05")
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)

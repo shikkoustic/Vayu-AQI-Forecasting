@@ -12,10 +12,10 @@ args, unknown = parser.parse_known_args()
 ee.Initialize(project="aqi-shikkoustic")
 
 REGIONS = {
-    "North_Delhi":   {"lat": 28.66, "lon": 77.13},
-    "South_Delhi":   {"lat": 28.58, "lon": 77.22},
-    "East_Delhi":    {"lat": 28.64, "lon": 77.31},
-    "West_Delhi":    {"lat": 28.63, "lon": 77.07},
+    "North_Delhi":   {"lat": 28.83, "lon": 77.15},
+    "South_Delhi":   {"lat": 28.49, "lon": 77.21},
+    "East_Delhi":    {"lat": 28.62, "lon": 77.32},
+    "West_Delhi":    {"lat": 28.61, "lon": 76.99},
     "Central_Delhi": {"lat": 28.63, "lon": 77.22},
 }
 
