@@ -310,7 +310,7 @@ def predict_next_day(region_name="North_Delhi"):
 
     if precip > 5 and wind > 20:
         cond, w_class, bg_image = "Thunderstorm", "thunderstorm", "thunderstorm.png"
-    elif precip > 1:
+    elif precip > 2.0:
         cond, w_class, bg_image = "Rain", "rain", "rain.png"
     elif time_period == "sunrise" or (18 <= hour <= 19 and humidity < 70):
         cond, w_class, bg_image = "Evening", "sunset", "sunset.png"
