@@ -1,0 +1,20 @@
+{# Cross-links between the pollutant pages #}
+{% set _all = [
+  {'key':'pm25','label':'PM2.5','dot':'#9db4dd'},
+  {'key':'pm10','label':'PM10','dot':'#e0b98c'},
+  {'key':'no2','label':'NO₂','dot':'#ff8272'},
+  {'key':'so2','label':'SO₂','dot':'#f7cd52'},
+  {'key':'co','label':'CO','dot':'#94a6ff'},
+  {'key':'o3','label':'O₃','dot':'#45dbc9'}
+] %}
+<div class="poll-footer">
+  <div class="poll-footer-label">Explore the other pollutants</div>
+  <div class="poll-footer-grid">
+    {% for item in _all %}
+    <a class="poll-jump {% if item.key == p_key %}current{% endif %}"
+       href="/pollutants/{{ item.key }}{% if selected_region %}?region={{ selected_region }}{% endif %}">
+      <span class="dot" style="background: {{ item.dot }}"></span>{{ item.label }}
+    </a>
+    {% endfor %}
+  </div>
+</div>

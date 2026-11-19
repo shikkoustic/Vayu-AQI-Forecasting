@@ -4,28 +4,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CO - Air Quality Dashboard</title>
-  <link rel="stylesheet" href="../static/css/dashboard.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@300;400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="../static/css/pollutants.css">
+  <title>CO — Project Vayu</title>
+  <meta name="description" content="Carbon Monoxide — sources, health effects and protection, with live readings from the Vayu satellite feed.">
+  <link rel="stylesheet" href="/static/css/navbar.css">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="/static/css/pollutants.css">
 </head>
 
-<body class="theme-co">
+<body class="theme-co" data-pollutant="co">
     {% include 'components/navbar.html' %}
+  {% include 'components/pollutant-fx.html' %}
 
   <div class="dashboard-container">
     <div class="content-area">
 
       <div class="info-section">
-        <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+        <a href="/dashboard{% if selected_region %}?region={{ selected_region }}{% endif %}" class="back-link">← Back to Dashboard</a>
 
-        <div class="pollutant-header co">
-          <h1 class="pollutant-title">CO</h1>
-          <p class="pollutant-subtitle">Carbon Monoxide</p>
-        </div>
+        {% set p_key = 'co' %}
+        {% set p_symbol = 'CO' %}
+        {% set p_sub = 'Carbon Monoxide' %}
+        {% set p_eyebrow = 'Incomplete combustion · silent gas' %}
+        {% include 'components/pollutant-hero.html' %}
 
         <div class="what-block">
           <h2 class="section-heading"><span class="emoji">🔍</span> What is CO?</h2>
@@ -147,6 +147,8 @@
       </div>
     </div>
   </div>
+
+  {% include 'components/pollutant-footer.html' %}
 </body>
 
 </html>

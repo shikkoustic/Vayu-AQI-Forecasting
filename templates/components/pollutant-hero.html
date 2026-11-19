@@ -1,0 +1,91 @@
+{# Hero for pollutant pages.
+   Expects: p_key, p_symbol, p_sub, p_eyebrow  (selected_region optional) #}
+<div class="pollutant-header {{ p_key }}">
+
+  <div class="hero-text">
+    <div class="pollutant-eyebrow">{{ p_eyebrow }}</div>
+    <h1 class="pollutant-title">{{ p_symbol }}</h1>
+    <p class="pollutant-subtitle">{{ p_sub }}</p>
+
+    <div class="live-chip" data-region="{{ selected_region | default('North_Delhi') }}">
+      <span class="live-flag"><span class="live-dot"></span> LIVE</span>
+      <span><span class="live-val">0</span><span class="live-unit"></span></span>
+      <span class="live-level"></span>
+      <span class="live-region"></span>
+    </div>
+  </div>
+
+  <div class="hero-motif" aria-hidden="true">
+
+    {% if p_key in ['pm25', 'pm10'] %}
+    {# Particle-size comparison, drawn to scale: 1 µm = 2.34 px #}
+    <svg viewBox="0 0 260 210">
+      <circle class="mol-ring mol-ring-dash" cx="130" cy="98" r="82" stroke-width="1.5"/>
+      <circle cx="130" cy="98" r="82" fill="var(--accent)" opacity="0.05"/>
+      <text class="mol-cap" x="130" y="196">Human hair · 70 µm</text>
+
+      <g class="pm-speck">
+        <circle cx="99" cy="80" r="11.7" fill="var(--accent)" opacity="0.85"/>
+        {% if p_key == 'pm10' %}<circle class="mol-halo" cx="99" cy="80" r="20" fill="none" stroke="var(--accent)" stroke-width="2"/>{% endif %}
+      </g>
+      <line x1="110" y1="72" x2="152" y2="46" stroke="var(--accent)" stroke-width="1" opacity="0.4"/>
+      <text class="mol-cap" x="180" y="44">PM10 · 10 µm</text>
+
+      <g class="pm-speck" style="animation-delay:-3s">
+        <circle cx="150" cy="116" r="2.9" fill="#fff"/>
+        {% if p_key == 'pm25' %}<circle class="mol-halo" cx="150" cy="116" r="11" fill="none" stroke="var(--accent)" stroke-width="1.6"/>{% endif %}
+      </g>
+      <line x1="154" y1="120" x2="188" y2="142" stroke="var(--accent)" stroke-width="1" opacity="0.4"/>
+      <text class="mol-cap" x="206" y="152">PM2.5 · 2.5 µm</text>
+    </svg>
+
+    {% elif p_key == 'co' %}
+    {# Carbon monoxide — linear, triple bond #}
+    <svg viewBox="0 0 260 210">
+      <circle class="mol-ring mol-ring-dash" cx="133" cy="105" r="88" stroke-width="1.2"/>
+      <line class="mol-bond" x1="105" y1="95"  x2="161" y2="95"/>
+      <line class="mol-bond" x1="105" y1="105" x2="161" y2="105" style="animation-delay:0.35s,1.5s"/>
+      <line class="mol-bond" x1="105" y1="115" x2="161" y2="115" style="animation-delay:0.45s,1.6s"/>
+      <g class="mol-atom">
+        <circle class="mol-halo" cx="78" cy="105" r="27" fill="none" stroke="var(--accent)" stroke-width="2"/>
+        <circle cx="78" cy="105" r="27" fill="var(--accent)" opacity="0.9"/>
+        <text class="mol-label" x="78" y="105" style="fill:#101627">C</text>
+      </g>
+      <g class="mol-atom">
+        <circle cx="188" cy="105" r="27" fill="#fff" opacity="0.92"/>
+        <text class="mol-label" x="188" y="105" style="fill:#101627">O</text>
+      </g>
+      <text class="mol-cap" x="130" y="192">Colourless · odourless · undetectable</text>
+    </svg>
+
+    {% else %}
+    {# Bent triatomic: NO₂ / SO₂ / O₃ #}
+    {% set centre = {'no2': 'N', 'so2': 'S', 'o3': 'O'}[p_key] %}
+    {% set caption = {'no2': 'Bent · 134° bond angle', 'so2': 'Bent · 119° bond angle', 'o3': 'Bent · resonant structure'}[p_key] %}
+    <svg viewBox="0 0 260 210">
+      <circle class="mol-ring mol-ring-dash" cx="130" cy="112" r="90" stroke-width="1.2"/>
+
+      <line class="mol-bond" x1="108.9" y1="116.7" x2="72.5" y2="86.9"/>
+      <line class="mol-bond" x1="104.7" y1="121.3" x2="68.7" y2="91.5" style="animation-delay:0.32s,1.5s"/>
+      <line class="mol-bond" x1="151.1" y1="116.7" x2="187.5" y2="86.9" style="animation-delay:0.24s,1.45s"/>
+      <line class="mol-bond" x1="155.3" y1="121.3" x2="191.3" y2="91.5" style="animation-delay:0.4s,1.6s"/>
+
+      <g class="mol-atom">
+        <circle class="mol-halo" cx="130" cy="138" r="30" fill="none" stroke="var(--accent)" stroke-width="2"/>
+        <circle cx="130" cy="138" r="30" fill="var(--accent)" opacity="0.92"/>
+        <text class="mol-label" x="130" y="138" style="fill:#11151f">{{ centre }}</text>
+      </g>
+      <g class="mol-atom">
+        <circle cx="52" cy="74" r="24" fill="#fff" opacity="0.9"/>
+        <text class="mol-label" x="52" y="74" style="fill:#11151f">O</text>
+      </g>
+      <g class="mol-atom">
+        <circle cx="208" cy="74" r="24" fill="#fff" opacity="0.9"/>
+        <text class="mol-label" x="208" y="74" style="fill:#11151f">O</text>
+      </g>
+      <text class="mol-cap" x="130" y="196">{{ caption }}</text>
+    </svg>
+    {% endif %}
+
+  </div>
+</div>

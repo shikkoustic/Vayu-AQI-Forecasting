@@ -4,28 +4,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PM10 - Air Quality Dashboard</title>
-  <link rel="stylesheet" href="../static/css/dashboard.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@300;400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="../static/css/pollutants.css">
+  <title>PM10 — Project Vayu</title>
+  <meta name="description" content="Particulate Matter < 10 µm — sources, health effects and protection, with live readings from the Vayu satellite feed.">
+  <link rel="stylesheet" href="/static/css/navbar.css">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="/static/css/pollutants.css">
 </head>
 
-<body class="theme-pm10">
+<body class="theme-pm10" data-pollutant="pm10">
     {% include 'components/navbar.html' %}
+  {% include 'components/pollutant-fx.html' %}
 
   <div class="dashboard-container">
     <div class="content-area">
 
       <div class="info-section">
-        <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+        <a href="/dashboard{% if selected_region %}?region={{ selected_region }}{% endif %}" class="back-link">← Back to Dashboard</a>
 
-        <div class="pollutant-header pm10">
-          <h1 class="pollutant-title">PM10</h1>
-          <p class="pollutant-subtitle">Particulate Matter &lt; 10 µm</p>
-        </div>
+        {% set p_key = 'pm10' %}
+        {% set p_symbol = 'PM10' %}
+        {% set p_sub = 'Particulate Matter < 10 µm' %}
+        {% set p_eyebrow = 'Coarse particulate · dust & grit' %}
+        {% include 'components/pollutant-hero.html' %}
 
         <div class="what-block">
           <h2 class="section-heading"><span class="emoji">🔍</span> What is PM10?</h2>
@@ -135,6 +135,8 @@
 
     </div>
   </div>
+
+  {% include 'components/pollutant-footer.html' %}
 </body>
 
 </html>

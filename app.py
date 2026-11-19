@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, redirect, url_for, jsonify
 import os
+import sys
 from dotenv import load_dotenv
 import google.generativeai as genai
 from ml.predict import predict_next_day, load_regional_models, aqi_color, forecast_extended_aqi
@@ -8,15 +9,12 @@ from ml.aqi import pm25_to_aqi, aqi_category, aqi_transition_message, get_color
 import pandas as pd
 import numpy as np
 import requests
-import uuid
 import subprocess
 from datetime import datetime as dt_now
 from apscheduler.schedulers.background import BackgroundScheduler
 
 load_dotenv()
 
-CASHFREE_APP_ID = os.getenv("CASHFREE_APP_ID")
-CASHFREE_SECRET_KEY = os.getenv("CASHFREE_SECRET_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 FLASK_KEY = os.getenv("FLASK_KEY")
 
@@ -42,29 +40,74 @@ def dashboard():
                          selected_region=region,
                          prediction=prediction_data)
 
-@app.route('/pollutants/pm25')
-def pm25():
-    return render_template('pollutant-info/pm25.html')
+_POLLUTANT_PAGES = ['pm25', 'pm10', 'no2', 'so2', 'co', 'o3']
 
-@app.route('/pollutants/pm10')
-def pm10():
-    return render_template('pollutant-info/pm10.html')
+@app.route('/pollutants/<key>')
+def pollutant_page(key):
+    if key not in _POLLUTANT_PAGES:
+        return redirect(url_for('dashboard'))
+    region = request.args.get("region", "North_Delhi")
+    return render_template(f'pollutant-info/{key}.html', selected_region=region)
 
-@app.route('/pollutants/no2')
-def no2():
-    return render_template('pollutant-info/no2.html')
 
-@app.route('/pollutants/so2')
-def so2():
-    return render_template('pollutant-info/so2.html')
+# Live reading for the pollutant pages — reads the same satellite feed the
+# dashboard uses, straight off the tail of the region's CSV so the page
+# paints instantly instead of waiting on the models.
+_POLLUTANT_FEED = {
+    "pm25": {"col": "PM2.5",       "scale": 1,      "unit": "\u00b5g/m\u00b3"},
+    "no2":  {"col": "NO2_Density", "scale": 10000,  "unit": "ppb", "high": 40, "mid": 10},
+    "co":   {"col": "CO_Density",  "scale": 100,    "unit": "ppb", "high": 10, "mid": 4},
+    "so2":  {"col": "SO2_Density", "scale": 100000, "unit": "ppb", "high": 20, "mid": 5},
+}
 
-@app.route('/pollutants/co')
-def co():
-    return render_template('pollutant-info/co.html')
+def _last_csv_row(path):
+    """Header + final data row of a CSV, without loading the whole file."""
+    with open(path, "rb") as f:
+        header = f.readline().decode("utf-8").strip().split(",")
+        f.seek(0, os.SEEK_END)
+        size = f.tell()
+        block = min(8192, size)
+        f.seek(size - block)
+        lines = [ln for ln in f.read().decode("utf-8", "ignore").strip().splitlines() if ln.strip()]
+    if not lines:
+        return None
+    return dict(zip(header, lines[-1].split(",")))
 
-@app.route('/pollutants/o3')
-def o3():
-    return render_template('pollutant-info/o3.html')
+@app.route('/api/pollutant-now')
+def pollutant_now():
+    region = request.args.get("region", "North_Delhi")
+    key = request.args.get("key", "pm25")
+    meta = _POLLUTANT_FEED.get(key)
+    if meta is None:
+        return jsonify({"ok": False, "reason": "not measured in this feed"})
+    try:
+        csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "data", f"{region}_Historical.csv")
+        row = _last_csv_row(csv_path)
+        if not row or meta["col"] not in row:
+            return jsonify({"ok": False, "reason": "no data"})
+
+        value = max(0.0, round(float(row[meta["col"]]) * meta["scale"], 1))
+
+        if key == "pm25":
+            aqi = pm25_to_aqi(value)
+            level, color = aqi_category(aqi), aqi_color(aqi)
+        else:
+            aqi = None
+            if value > meta["high"]:
+                level, color = "High", "#ef4444"
+            elif value > meta["mid"]:
+                level, color = "Moderate", "#f59e0b"
+            else:
+                level, color = "Low", "#4ade80"
+
+        stamp = dt_now.strptime(row["time"], "%Y-%m-%d %H:%M:%S").strftime("%d %b, %I:%M %p")
+        return jsonify({"ok": True, "key": key, "value": value, "unit": meta["unit"],
+                        "level": level, "color": color, "aqi": aqi,
+                        "region": region, "updated": stamp})
+    except Exception as e:
+        print(f"pollutant-now error ({region}/{key}):", e)
+        return jsonify({"ok": False, "reason": "unavailable"})
 
 @app.route('/airchat')
 def airchat():
@@ -133,55 +176,6 @@ def about():
         time_period=weather.get("time_period", "afternoon"),
         selected_region=region
     )
-
-@app.route('/pay')
-def pay():
-    region = request.args.get("region", "North_Delhi")
-    return render_template('pay.html', selected_region=region)
-
-@app.route('/create-payment-order', methods=['POST'])
-def create_payment_order():
-    amount = request.json.get('amount')
-    if not amount or float(amount) <= 0:
-        return jsonify({"error": "Invalid amount"}), 400
-    order_id = "vayu_" + str(uuid.uuid4().hex)[:16]
-    url = "https://sandbox.cashfree.com/pg/orders"
-    headers = {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "x-api-version": "2023-08-01",
-        "x-client-id": CASHFREE_APP_ID,
-        "x-client-secret": CASHFREE_SECRET_KEY
-    }
-    customer_email = 'guest@vayu.com'
-    customer_phone = "9999999999"
-    payload = {
-        "customer_details": {
-            "customer_id": "cust_" + str(uuid.uuid4().hex)[:8],
-            "customer_email": customer_email,
-            "customer_phone": customer_phone 
-        },
-        "order_amount": float(amount),
-        "order_currency": "INR",
-        "order_id": order_id,
-        "order_meta": {
-            "return_url": request.host_url.rstrip('/') + url_for('payment_return') + "?order_id={order_id}"
-        }
-    }
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        res_data = response.json()
-        if response.status_code == 200:
-            return jsonify({"payment_session_id": res_data.get("payment_session_id")})
-        else:
-            return jsonify({"error": res_data.get("message", "Payment creation failed")}), 400
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/payment-return')
-def payment_return():
-    order_id = request.args.get('order_id')
-    return render_template('payment_success.html', order_id=order_id)
 
 def predict_for_date(date, region="North_Delhi"):
     from ml.predict import load_regional_models, aqi_color
@@ -485,7 +479,11 @@ if __name__ == '__main__':
     _BASE = os.path.dirname(os.path.abspath(__file__))
     _DATA_DIR = os.path.join(_BASE, "data")
     _SCRIPT = os.path.join(_BASE, "scripts", "update_data.py")
-    _VENV_PYTHON = os.path.join(_BASE, "venv", "bin", "python")
+    # Was a hardcoded "<base>/venv/bin/python" - only ever existed on the
+    # original dev machine. sys.executable is whatever interpreter this
+    # process is actually running under, which is correct everywhere,
+    # deployed or not.
+    _VENV_PYTHON = sys.executable
 
     def run_data_update():
         print(f"\n🔄 [{dt_now.now().strftime('%I:%M %p')}] Auto-refreshing data...")
@@ -540,4 +538,4 @@ if __name__ == '__main__':
         print("\n⏰ Scheduler active — data will auto-refresh every 2 hours at :05")
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5050)

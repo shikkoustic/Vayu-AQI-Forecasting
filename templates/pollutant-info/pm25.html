@@ -4,28 +4,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PM2.5 - Air Quality Dashboard</title>
-  <link rel="stylesheet" href="../static/css/dashboard.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@300;400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="../static/css/pollutants.css">
+  <title>PM2.5 — Project Vayu</title>
+  <meta name="description" content="Particulate Matter < 2.5 µm — sources, health effects and protection, with live readings from the Vayu satellite feed.">
+  <link rel="stylesheet" href="/static/css/navbar.css">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="/static/css/pollutants.css">
 </head>
 
-<body class="theme-pm25">
+<body class="theme-pm25" data-pollutant="pm25">
     {% include 'components/navbar.html' %}
+  {% include 'components/pollutant-fx.html' %}
 
   <div class="dashboard-container">
     <div class="content-area">
 
       <div class="info-section">
-        <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+        <a href="/dashboard{% if selected_region %}?region={{ selected_region }}{% endif %}" class="back-link">← Back to Dashboard</a>
 
-        <div class="pollutant-header pm25">
-          <h1 class="pollutant-title">PM2.5</h1>
-          <p class="pollutant-subtitle">Particulate Matter &lt; 2.5 µm</p>
-        </div>
+        {% set p_key = 'pm25' %}
+        {% set p_symbol = 'PM2.5' %}
+        {% set p_sub = 'Particulate Matter < 2.5 µm' %}
+        {% set p_eyebrow = 'Fine particulate · primary AQI driver' %}
+        {% include 'components/pollutant-hero.html' %}
 
         <div class="what-block">
           <h2 class="section-heading"><span class="emoji">🔍</span> What is PM2.5?</h2>
@@ -137,6 +137,8 @@
       </div>
     </div>
   </div>
+
+  {% include 'components/pollutant-footer.html' %}
 </body>
 
 </html>

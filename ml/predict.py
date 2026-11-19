@@ -51,6 +51,93 @@ def _wmo_to_weather(code, is_night=False):
             emoji, label = "☁️", "Overcast"
     return emoji, label
 
+_SKY_CACHE = {}
+_SKY_TTL_SECONDS = 600
+
+def _sky_period(now, sunrise, sunset):
+    """Time-of-day bucket from the real sunrise/sunset, like Apple Weather."""
+    m = pd.Timedelta(minutes=1)
+    if now < sunrise - 30 * m or now >= sunset + 30 * m:
+        return "night", "night"
+    if now < sunrise + 60 * m:
+        return "morning", "sunrise"
+    if now >= sunset - 60 * m:
+        return "evening", "evening"
+    if now.hour < 12:
+        return "day", "morning"
+    return "day", "afternoon"
+
+def _sky_condition(code, visibility_m, time_of_day):
+    """Map a WMO code (+ visibility) and time of day to (label, class, image)."""
+    night = time_of_day == "night"
+    golden = time_of_day in ("morning", "evening")
+    if code in (95, 96, 99):
+        return "Thunderstorm", "thunderstorm", "thunderstorm.png"
+    if 51 <= code <= 67 or 80 <= code <= 82:
+        label = "Drizzle" if code <= 57 else "Rain"
+        return label, "rain", "rain_night.png" if night else "rain.png"
+    if 71 <= code <= 86:
+        return "Snow", "cloudy", "cloudy_night.png" if night else "cloudy.png"
+    if code in (45, 48) or (visibility_m is not None and visibility_m < 1000):
+        return "Fog", "mist", "mist_night.png" if night else "mist.png"
+    if visibility_m is not None and visibility_m < 4000:
+        return "Haze", "mist", "mist_night.png" if night else "mist.png"
+    if code == 3:
+        if night:
+            return "Cloudy Night", "cloudy_night", "cloudy_night.png"
+        return "Overcast", "cloudy", "cloudy.png"
+    # clear / mostly clear / partly cloudy
+    if night:
+        return ("Clear Night" if code == 0 else "Partly Cloudy Night"), "clear_night", "clear_night.png"
+    if golden:
+        return ("Sunrise" if time_of_day == "morning" else "Sunset"), "sunset", "sunset.png"
+    return ("Clear" if code == 0 else "Partly Cloudy"), "clear_day", "clear_day.png"
+
+def fetch_live_sky(region_name):
+    """Current sky for the region from Open-Meteo, cached for 10 minutes.
+    Returns None if the API is unreachable so callers can fall back."""
+    now = pd.Timestamp.now(tz="Asia/Kolkata").tz_localize(None)
+    cached = _SKY_CACHE.get(region_name)
+    if cached and (now - cached[0]).total_seconds() < _SKY_TTL_SECONDS:
+        sky = dict(cached[1])
+    else:
+        coords = _REGION_COORDS.get(region_name, _REGION_COORDS["North_Delhi"])
+        try:
+            resp = requests.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": coords["lat"],
+                    "longitude": coords["lon"],
+                    "current": "weather_code,visibility",
+                    "daily": "sunrise,sunset",
+                    "timezone": "Asia/Kolkata",
+                    "forecast_days": 1,
+                },
+                timeout=5,
+            ).json()
+            cur, daily = resp["current"], resp["daily"]
+            sky = {
+                "code": int(cur["weather_code"]),
+                "visibility": cur.get("visibility"),
+                "sunrise": pd.Timestamp(daily["sunrise"][0]),
+                "sunset": pd.Timestamp(daily["sunset"][0]),
+            }
+            _SKY_CACHE[region_name] = (now, sky)
+        except Exception as e:
+            print(f"  ⚠️ Could not fetch live sky: {e}")
+            return None
+
+    # sunrise/sunset shift ~1 min/day, so reuse today's times on other dates
+    day = now.normalize()
+    sunrise = day + (sky["sunrise"] - sky["sunrise"].normalize())
+    sunset = day + (sky["sunset"] - sky["sunset"].normalize())
+    time_of_day, time_period = _sky_period(now, sunrise, sunset)
+    cond, w_class, bg_image = _sky_condition(sky["code"], sky["visibility"], time_of_day)
+    return {
+        "condition": cond, "class": w_class, "bg_image": bg_image,
+        "time_of_day": time_of_day, "time_period": time_period,
+    }
+
 def fetch_hourly_forecast(region_name, hours=5):
     """Fetch next N hours of weather forecast from Open-Meteo."""
     coords = _REGION_COORDS.get(region_name, _REGION_COORDS["North_Delhi"])
@@ -327,6 +414,13 @@ def predict_next_day(region_name="North_Delhi"):
         cond, w_class, bg_image = "Evening", "sunset", "sunset.png"
     else:
         cond, w_class, bg_image = "Clear", "clear_day", "clear_day.png"
+
+    # The rules above describe the dataset's last row, which can be hours or
+    # days old. Prefer the live sky so the background matches right now.
+    live_sky = fetch_live_sky(region_name)
+    if live_sky:
+        cond, w_class, bg_image = live_sky["condition"], live_sky["class"], live_sky["bg_image"]
+        time_of_day, time_period = live_sky["time_of_day"], live_sky["time_period"]
 
     if humidity > 90:
         visibility = 1.0

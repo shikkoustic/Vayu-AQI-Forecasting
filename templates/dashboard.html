@@ -197,7 +197,7 @@
 
         {% set pm_level = 'Severe' if cp.aqi > 400 else 'Very Poor' if cp.aqi > 300 else 'Poor' if cp.aqi > 200 else 'Moderate' if cp.aqi > 100 else 'Satisfactory' if cp.aqi > 50 else 'Good' %}
         {% set pm_color = '#991b1b' if cp.aqi > 400 else '#ef4444' if cp.aqi > 300 else '#f97316' if cp.aqi > 200 else '#eab308' if cp.aqi > 100 else '#84cc16' if cp.aqi > 50 else '#22c55e' %}
-        <a href="/pollutants/pm25" class="poll-card glass-card">
+        <a href="/pollutants/pm25?region={{ selected_region }}" class="poll-card glass-card">
           <div class="poll-card-top">
             <div class="poll-icon poll-icon-pm25">🌫️</div>
             <div class="poll-info">
@@ -217,7 +217,7 @@
 
         {% set no2_level = 'High' if cp.no2 > 40 else 'Moderate' if cp.no2 > 10 else 'Low' %}
         {% set no2_color = '#ef4444' if cp.no2 > 40 else '#f59e0b' if cp.no2 > 10 else '#4ade80' %}
-        <a href="/pollutants/no2" class="poll-card glass-card">
+        <a href="/pollutants/no2?region={{ selected_region }}" class="poll-card glass-card">
           <div class="poll-card-top">
             <div class="poll-icon poll-icon-no2">💨</div>
             <div class="poll-info">
@@ -237,7 +237,7 @@
 
         {% set co_level = 'High' if cp.co > 10 else 'Moderate' if cp.co > 4 else 'Low' %}
         {% set co_color = '#ef4444' if cp.co > 10 else '#f59e0b' if cp.co > 4 else '#4ade80' %}
-        <a href="/pollutants/co" class="poll-card glass-card">
+        <a href="/pollutants/co?region={{ selected_region }}" class="poll-card glass-card">
           <div class="poll-card-top">
             <div class="poll-icon poll-icon-co">🔥</div>
             <div class="poll-info">
@@ -257,7 +257,7 @@
 
         {% set so2_level = 'High' if cp.so2 > 20 else 'Moderate' if cp.so2 > 5 else 'Low' %}
         {% set so2_color = '#ef4444' if cp.so2 > 20 else '#f59e0b' if cp.so2 > 5 else '#4ade80' %}
-        <a href="/pollutants/so2" class="poll-card glass-card">
+        <a href="/pollutants/so2?region={{ selected_region }}" class="poll-card glass-card">
           <div class="poll-card-top">
             <div class="poll-icon poll-icon-so2">🏭</div>
             <div class="poll-info">
