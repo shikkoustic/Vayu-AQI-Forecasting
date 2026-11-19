@@ -2,7 +2,7 @@ from flask import Flask, request, render_template, redirect, url_for, jsonify
 import os
 import sys
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
 from ml.predict import predict_next_day, load_regional_models, aqi_color, forecast_extended_aqi
 from ml.preprocess import load_dataset, create_features
 from ml.aqi import pm25_to_aqi, aqi_category, aqi_transition_message, get_color
@@ -18,8 +18,7 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 FLASK_KEY = os.getenv("FLASK_KEY")
 
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-2.5-flash")
+genai_client = genai.Client(api_key=GEMINI_API_KEY)
 
 app = Flask(__name__)
 app.secret_key = FLASK_KEY
@@ -155,7 +154,9 @@ If the query is NOT related to air quality, politely decline.
 
 User Query: {user_message}
 """
-        response = model.generate_content(system_context)
+        response = genai_client.models.generate_content(
+            model="gemini-2.5-flash", contents=system_context
+        )
         return {"reply": response.text}
     except Exception as e:
         print("AirChat LLM Error:", e)
