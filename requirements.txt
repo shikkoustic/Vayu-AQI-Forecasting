@@ -1,0 +1,22 @@
+# Minimal deploy requirements - only what app.py / ml / scripts actually
+# import, not the full dev environment's pip freeze (which had ~150+
+# packages including unrelated ones like PyTorch's captum). Pinned to
+# versions verified working together in a clean venv, including the
+# protobuf pin needed to satisfy both tensorflow and google-generativeai
+# at once (they want different ranges; this version imports cleanly for
+# both even though pip's resolver warns about it).
+Flask==3.1.3
+gunicorn==27.0.1
+python-dotenv==1.2.4
+requests==2.34.2
+pandas==3.1.1
+numpy==2.5.5
+scikit-learn==1.9.1
+xgboost==3.4.1
+lightgbm==4.7.0
+catboost==1.2.10
+tensorflow==2.21.0
+protobuf==7.36.2
+earthengine-api==1.7.53
+google-generativeai==0.8.6
+APScheduler==3.11.3
